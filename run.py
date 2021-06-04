@@ -3,8 +3,7 @@ import argparser
 import os
 from utils.logger import Logger
 
-from apex.parallel import DistributedDataParallel
-from apex import amp
+from torch import cuda
 from torch.utils.data.distributed import DistributedSampler
 
 import numpy as np
@@ -117,12 +116,11 @@ def main(opts):
     else:
         logger = Logger(logdir_full, rank=rank, debug=opts.debug, summary=False)
 
-<<<<<<< HEAD
+
     logger = Logger(logdir_full, rank=0, debug=opts.debug, summary=opts.visualize, step=opts.step)
 
     device = torch.device('cuda') if cuda.is_available() else torch.device('cpu')
-=======
->>>>>>> parent of 04c97b9 (remove amp and DistributedDataParallel)
+
     logger.print(f"Device: {device}")
 
     # Set up random seed
