@@ -121,7 +121,7 @@ class BiSeNet(torch.nn.Module):
             print('Error: unspport context_path network \n')
 
         # build final convolution
-        self.conv = nn.Conv2d(in_channels=num_classes, out_channels=num_classes, kernel_size=1)
+        # self.conv = nn.Conv2d(in_channels=num_classes, out_channels=num_classes, kernel_size=1)
 
         self.init_weight()
 
@@ -132,7 +132,7 @@ class BiSeNet(torch.nn.Module):
         self.mul_lr.append(self.supervision1)
         self.mul_lr.append(self.supervision2)
         self.mul_lr.append(self.feature_fusion_module)
-        self.mul_lr.append(self.conv)
+        # self.mul_lr.append(self.conv)
 
     def init_weight(self):
         for name, m in self.named_modules():

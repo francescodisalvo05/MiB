@@ -15,8 +15,8 @@ from torch import distributed
 from dataset import VOCSegmentationIncremental, AdeSegmentationIncremental
 from dataset import transform
 from metrics import StreamSegMetrics
-
-from segmentation_module import make_model
+from torch.cuda import amp
+from segmentation_module_BiSeNet import make_model
 
 from train import Trainer
 import tasks
@@ -103,19 +103,16 @@ def get_dataset(opts):
 
 
 def main(opts):
-    distributed.init_process_group(backend='nccl', init_method='env://')
+    """distributed.init_process_group(backend='nccl', init_method='env://')
     device_id, device = opts.local_rank, torch.device(opts.local_rank)
-    rank, world_size = distributed.get_rank(), distributed.get_world_size()
-    torch.cuda.set_device(device_id)
+    rank, world_size = distributed.get_rank(), distributed.get_world_size()"""
+    # device = torch.device("gpu") if torch.cuda.is_available() else torch.device("cpu")
+    rank = 0
+    world_size = None
 
     # Initialize logging
     task_name = f"{opts.task}-{opts.dataset}"
     logdir_full = f"{opts.logdir}/{task_name}/{opts.name}/"
-    if rank == 0:
-        logger = Logger(logdir_full, rank=rank, debug=opts.debug, summary=opts.visualize, step=opts.step)
-    else:
-        logger = Logger(logdir_full, rank=rank, debug=opts.debug, summary=False)
-
 
     logger = Logger(logdir_full, rank=0, debug=opts.debug, summary=opts.visualize, step=opts.step)
 
@@ -189,12 +186,12 @@ def main(opts):
     if model_old is not None:
         [model, model_old], optimizer = amp.initialize([model.to(device), model_old.to(device)], optimizer,
                                                        opt_level=opts.opt_level)
-        model_old = DistributedDataParallel(model_old)
+        model_old = model_old.cuda(device)
     else:
         model, optimizer = amp.initialize(model.to(device), optimizer, opt_level=opts.opt_level)
 
     # Put the model on GPU
-    model = DistributedDataParallel(model, delay_allreduce=True)
+    model = model.cuda(device)
 
     # xxx Load old model from old weights if step > 0!
     if opts.step > 0:
@@ -259,11 +256,8 @@ def main(opts):
     # print opts before starting training to log all parameters
     logger.add_table("Opts", vars(opts))
 
-    if rank == 0 and opts.sample_num > 0:
-        sample_ids = np.random.choice(len(val_loader), opts.sample_num, replace=False)  # sample idxs for visualization
-        logger.info(f"The samples id are {sample_ids}")
-    else:
-        sample_ids = None
+    sample_ids = np.random.choice(len(val_loader), opts.sample_num, replace=False)  # sample idxs for visualization
+    logger.info(f"The samples id are {sample_ids}")
 
     label2color = utils.Label2Color(cmap=utils.color_map(opts.dataset))  # convert labels to images
     denorm = utils.Denormalize(mean=[0.485, 0.456, 0.406],
@@ -305,12 +299,12 @@ def main(opts):
             logger.info(val_metrics.to_str(val_score))
 
             # =====  Save Best Model  =====
-            if rank == 0:  # save best model at the last iteration
-                score = val_score['Mean IoU']
-                # best model to build incremental steps
-                save_ckpt(f"checkpoints/step/{task_name}_{opts.name}_{opts.step}.pth",
-                          model, trainer, optimizer, scheduler, cur_epoch, score)
-                logger.info("[!] Checkpoint saved.")
+            # save best model at the last iteration
+            score = val_score['Mean IoU']
+            # best model to build incremental steps
+            save_ckpt(f"checkpoints/step/{task_name}_{opts.name}_{opts.step}.pth",
+                      model, trainer, optimizer, scheduler, cur_epoch, score)
+            logger.info("[!] Checkpoint saved.")
 
             # =====  Log metrics on Tensorboard =====
             # visualize validation score and samples
@@ -338,7 +332,7 @@ def main(opts):
         cur_epoch += 1
 
     # =====  Save Best Model at the end of training =====
-    if rank == 0 and TRAIN:  # save best model at the last iteration
+    if TRAIN:  # save best model at the last iteration
         # best model to build incremental steps
         save_ckpt(f"checkpoints/step/{task_name}_{opts.name}_{opts.step}.pth",
                   model, trainer, optimizer, scheduler, cur_epoch, best_score)
@@ -357,7 +351,7 @@ def main(opts):
     if TRAIN:
         model = make_model(opts, classes=tasks.get_per_task_classes(opts.dataset, opts.task, opts.step))
         # Put the model on GPU
-        model = DistributedDataParallel(model.cuda(device))
+        model = model.cuda(device)
         ckpt = f"checkpoints/step/{task_name}_{opts.name}_{opts.step}.pth"
         checkpoint = torch.load(ckpt, map_location="cpu")
         model.load_state_dict(checkpoint["model_state"])

@@ -14,6 +14,16 @@ def make_model(opts, classes=None):
     norm = nn.BatchNorm2d  # not synchronized, can be enabled with apex
 
     body = models.__dict__[f'net_{opts.backbone}']
+
+    if not opts.no_pretrained:
+        pretrained_path = f'pretrained/{opts.backbone}_{opts.norm_act}.pth.tar'
+        pre_dict = torch.load(pretrained_path, map_location='cpu')
+        del pre_dict['state_dict']['classifier.fc.weight']
+        del pre_dict['state_dict']['classifier.fc.bias']
+
+        body.load_state_dict(pre_dict['state_dict'])
+        del pre_dict  # free memory
+
     head = BiSeNet(len(classes), body)
 
     if classes is not None:
@@ -47,7 +57,8 @@ class IncrementalSegmentationBiSeNet(nn.Module):
         # c = number of classes for the current step
         # in_channels = ???
         self.cls = nn.ModuleList(
-            [nn.Conv2d(256, c, 1) for c in classes]
+            [nn.Conv2d(in_channels=c, out_channels=c, kernel_size=1) for c in classes]
+            # [nn.Conv2d(256, c, 1) for c in classes]
         )
 
         self.classes = classes
