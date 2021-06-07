@@ -11,8 +11,8 @@ import models
 
 def make_model(opts, classes=None):
     norm = nn.BatchNorm2d  # not synchronized, can be enabled with apex
-
     body = models.__dict__[f'net_{opts.backbone}'](norm_act=norm, output_stride=opts.output_stride)
+
     if not opts.no_pretrained:
         pretrained_path = f'pretrained/{opts.backbone}_{opts.norm_act}.pth.tar'
         pre_dict = torch.load(pretrained_path, map_location='cpu')
