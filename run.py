@@ -142,7 +142,7 @@ def main(opts):
 
     logger.info(f"Dataset: {opts.dataset}, Train set: {len(train_dst)}, Val set: {len(val_dst)},"
                 f" Test set: {len(test_dst)}, n_classes {n_classes}")
-    logger.info(f"Total batch size is {opts.batch_size * world_size}")
+    # logger.info(f"Total batch size is {opts.batch_size * world_size}")
 
     # xxx Set up model
     logger.info(f"Backbone: {opts.backbone}")
