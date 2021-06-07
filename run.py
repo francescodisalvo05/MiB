@@ -133,11 +133,9 @@ def main(opts):
 
     #####################################################################################
     train_loader = data.DataLoader(train_dst, batch_size=opts.batch_size,
-                                   sampler=DistributedSampler(train_dst, num_replicas=world_size, rank=rank),
                                    num_workers=opts.num_workers, drop_last=True)
     val_loader = data.DataLoader(val_dst, batch_size=opts.batch_size if opts.crop_val else 1,
-                                 sampler=DistributedSampler(val_dst, num_replicas=world_size, rank=rank),
-                                 num_workers=opts.num_workers)
+                                   num_workers=opts.num_workers)
     #####################################################################################
 
     logger.info(f"Dataset: {opts.dataset}, Train set: {len(train_dst)}, Val set: {len(val_dst)},"
