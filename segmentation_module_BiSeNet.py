@@ -14,7 +14,9 @@ from utils.logger import Logger
 
 def make_model(opts, classes=None):
     norm = nn.BatchNorm2d  # not synchronized, can be enabled with apex
-    body = models.__dict__[f'net_{opts.backbone}'](norm_act=norm, output_stride=opts.output_stride)
+
+    # body = models.__dict__[f'net_{opts.backbone}'](norm_act=norm, output_stride=opts.output_stride)
+    body = opts.backbone
 
     if not opts.no_pretrained:
         pretrained_path = f'pretrained/{opts.backbone}_{opts.norm_act}.pth.tar'
@@ -69,12 +71,20 @@ class IncrementalSegmentationBiSeNet(nn.Module):
 
     def _network(self, x, ret_intermediate=False):
 
-        x_b = self.body(x)
-        x_pl = self.head(x_b)
+        # x_b = self.body(x)
+        x_pl = self.head(x)
+
+        # maybe ..
+        # x_pl, xc1, xc2 = self.head(x)
+        # x_pl size = [4,1,8,8]
+        # xc1 size = [4,1,4,4]
+        # xc2 size = [4,1,4,4]
+
         out = []
 
         for mod in self.cls:
             out.append(mod(x_pl))
+
         x_o = torch.cat(out, dim=1)
 
         if ret_intermediate:

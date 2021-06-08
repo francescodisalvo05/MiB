@@ -84,8 +84,6 @@ class BiSeNet(torch.nn.Module):
         # build spatial path
         self.saptial_path = Spatial_path()
 
-        context_path='resnet50'
-
         # build context path
         self.context_path = build_contextpath(name=context_path)
 
@@ -172,7 +170,8 @@ class BiSeNet(torch.nn.Module):
 
         # upsampling
         result = torch.nn.functional.interpolate(result, scale_factor=8, mode='bilinear')
-        result = self.conv(result)
+
+        # result = self.conv(result)
 
         if self.training == True:
             return result, cx1_sup, cx2_sup
