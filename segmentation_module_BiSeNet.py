@@ -72,7 +72,7 @@ class IncrementalSegmentationBiSeNet(nn.Module):
     def _network(self, x, ret_intermediate=False):
 
         # x_b = self.body(x)
-        x_pl = self.head(x)
+        x_pl, xc1, xc2 = self.head(x)
 
         # maybe ..
         # x_pl, xc1, xc2 = self.head(x)
